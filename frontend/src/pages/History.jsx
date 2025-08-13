@@ -14,9 +14,13 @@ import {
   User,
   GitBranch,
   TrendingUp,
-  RefreshCw
+  RefreshCw,
+  Wrench,
+  FileText,
+  Code,
+  Star
 } from 'lucide-react';
-import { getAnalysisHistory, getAnalysisResult } from '../services/api';
+import { getAnalysisHistory, getAnalysisResult, getFixSuggestions, getCodeReview } from '../services/api';
 
 const History = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,6 +30,10 @@ const History = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('csv');
   const [exportFiltered, setExportFiltered] = useState(true);
+  const [selectedFixes, setSelectedFixes] = useState(null);
+  const [showFixesModal, setShowFixesModal] = useState(false);
+  const [selectedReview, setSelectedReview] = useState(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
   const limit = 20;
 
   const { data: history, isLoading, error, refetch } = useQuery({
@@ -94,6 +102,62 @@ const History = () => {
       setSelectedAnalysis(result);
     } catch (error) {
       console.error('Error fetching analysis details:', error);
+    }
+  };
+
+  const handleViewFixes = async (commitHash) => {
+    try {
+      const fixes = await getFixSuggestions(commitHash);
+      setSelectedFixes({ commitHash, fixes });
+      setShowFixesModal(true);
+    } catch (error) {
+      console.error('Error fetching fixes:', error);
+      alert('Failed to load fixes. Please try again.');
+    }
+  };
+
+  const handleDownloadReport = async (commitHash) => {
+    try {
+      const result = await getAnalysisResult(commitHash);
+      
+      // Create report content
+      const reportData = {
+        commit_hash: result.commit_hash,
+        commit_author: result.commit_author,
+        commit_message: result.commit_message,
+        risk_level: result.risk_level,
+        confidence_score: result.confidence_score,
+        timestamp: result.timestamp,
+        regressions: result.regressions || [],
+        suggestions: result.suggestions || [],
+        details: result.details || {}
+      };
+
+      // Create JSON report
+      const reportContent = JSON.stringify(reportData, null, 2);
+      const blob = new Blob([reportContent], { type: 'application/json;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `analysis-report-${commitHash.substring(0, 8)}-${new Date().toISOString().split('T')[0]}.json`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      alert('Failed to download report. Please try again.');
+    }
+  };
+
+  const handleCodeReview = async (commitHash) => {
+    try {
+      const review = await getCodeReview(commitHash);
+      setSelectedReview({ commitHash, review });
+      setShowReviewModal(true);
+    } catch (error) {
+      console.error('Error fetching code review:', error);
+      alert('Failed to load code review. Please try again.');
     }
   };
 
@@ -186,7 +250,7 @@ const History = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="w-full">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Analysis History</h1>
         <p className="text-gray-600">
@@ -369,12 +433,36 @@ const History = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => handleViewDetails(item.commit_hash)}
-                        className="text-blue-600 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleViewDetails(item.commit_hash)}
+                          className="text-blue-600 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleViewFixes(item.commit_hash)}
+                          className="text-green-600 hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                          title="View Fixes"
+                        >
+                          <Wrench className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDownloadReport(item.commit_hash)}
+                          className="text-purple-600 hover:text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                          title="Download Report"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleCodeReview(item.commit_hash)}
+                          className="text-indigo-600 hover:text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                          title="Code Review"
+                        >
+                          <Code className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -475,6 +563,293 @@ const History = () => {
               >
                 Export
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fixes Modal */}
+      {showFixesModal && selectedFixes && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">Fix Suggestions</h3>
+                <button
+                  onClick={() => setShowFixesModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                Commit: {selectedFixes.commitHash.substring(0, 8)}...
+              </p>
+            </div>
+            <div className="p-6">
+              {selectedFixes.fixes && selectedFixes.fixes.length > 0 ? (
+                <div className="space-y-6">
+                  {selectedFixes.fixes.map((fix, index) => (
+                    <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <Wrench className="w-5 h-5 text-blue-500 mr-3 mt-0.5" />
+                        <div className="flex-1">
+                          <h4 className="font-medium text-blue-800 mb-2">{fix.title || 'Fix Suggestion'}</h4>
+                          <p className="text-sm text-blue-700 mb-3">{fix.description}</p>
+                          
+                          {fix.code_changes && fix.code_changes.length > 0 && (
+                            <div className="mb-3">
+                              <h5 className="text-sm font-medium text-blue-800 mb-2">Code Changes:</h5>
+                              <div className="space-y-2">
+                                {fix.code_changes.map((change, changeIndex) => (
+                                  <div key={changeIndex} className="bg-white rounded border border-blue-200 p-3">
+                                    <div className="text-sm text-blue-700 mb-1">
+                                      <strong>File:</strong> {change.file}
+                                      {change.line && <span className="ml-2">Line: {change.line}</span>}
+                                    </div>
+                                    {change.old_code && (
+                                      <div className="mb-2">
+                                        <div className="text-xs text-red-600 font-medium">Old Code:</div>
+                                        <pre className="text-xs bg-red-50 p-2 rounded border text-red-800 overflow-x-auto">
+                                          {change.old_code}
+                                        </pre>
+                                      </div>
+                                    )}
+                                    {change.new_code && (
+                                      <div>
+                                        <div className="text-xs text-green-600 font-medium">New Code:</div>
+                                        <pre className="text-xs bg-green-50 p-2 rounded border text-green-800 overflow-x-auto">
+                                          {change.new_code}
+                                        </pre>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center space-x-4 text-sm">
+                            <span className="text-blue-600">
+                              <strong>Confidence:</strong> {Math.round((fix.confidence || 0) * 100)}%
+                            </span>
+                            <span className="text-blue-600">
+                              <strong>Effort:</strong> {fix.effort_level || 'medium'}
+                            </span>
+                            {fix.risk_assessment && (
+                              <span className="text-blue-600">
+                                <strong>Risk:</strong> {fix.risk_assessment}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Wrench className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No fix suggestions available for this commit.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Code Review Modal */}
+      {showReviewModal && selectedReview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">Code Review</h3>
+                <button
+                  onClick={() => setShowReviewModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                Commit: {selectedReview.commitHash.substring(0, 8)}...
+              </p>
+            </div>
+            <div className="p-6">
+              {selectedReview.review ? (
+                <div className="space-y-6">
+                  {/* Overall Score */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-lg font-medium text-gray-900">Overall Score</h4>
+                      <div className="flex items-center space-x-2">
+                        <Star className="w-5 h-5 text-yellow-500" />
+                        <span className="text-2xl font-bold text-gray-900">
+                          {Math.round(selectedReview.review.overall_score || 0)}/100
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Code Quality */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 mb-3">Code Quality</h4>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Score:</span>
+                          <span className="text-sm font-medium">{Math.round(selectedReview.review.code_quality?.score || 0)}/100</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Complexity:</span>
+                          <span className="text-sm font-medium capitalize">{selectedReview.review.code_quality?.complexity || 'unknown'}</span>
+                        </div>
+                      </div>
+                      {selectedReview.review.code_quality?.strengths && selectedReview.review.code_quality.strengths.length > 0 && (
+                        <div className="mt-3">
+                          <h5 className="text-sm font-medium text-green-700 mb-1">Strengths:</h5>
+                          <ul className="text-xs text-green-600 space-y-1">
+                            {selectedReview.review.code_quality.strengths.map((strength, index) => (
+                              <li key={index}>• {strength}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Maintainability */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 mb-3">Maintainability</h4>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Score:</span>
+                          <span className="text-sm font-medium">{Math.round(selectedReview.review.maintainability?.score || 0)}/100</span>
+                        </div>
+                      </div>
+                      {selectedReview.review.maintainability?.suggestions && selectedReview.review.maintainability.suggestions.length > 0 && (
+                        <div className="mt-3">
+                          <h5 className="text-sm font-medium text-blue-700 mb-1">Suggestions:</h5>
+                          <ul className="text-xs text-blue-600 space-y-1">
+                            {selectedReview.review.maintainability.suggestions.slice(0, 3).map((suggestion, index) => (
+                              <li key={index}>• {suggestion}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Security Issues */}
+                  {selectedReview.review.security_issues && selectedReview.review.security_issues.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <h4 className="font-medium text-red-800 mb-3">Security Issues</h4>
+                      <div className="space-y-3">
+                        {selectedReview.review.security_issues.map((issue, index) => (
+                          <div key={index} className="bg-white rounded border border-red-200 p-3">
+                            <div className="flex items-start">
+                              <AlertTriangle className="w-4 h-4 text-red-500 mr-2 mt-0.5" />
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <span className="text-sm font-medium text-red-800">{issue.type}</span>
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    issue.severity === 'critical' ? 'bg-red-100 text-red-800' :
+                                    issue.severity === 'high' ? 'bg-orange-100 text-orange-800' :
+                                    issue.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {issue.severity}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-red-700 mb-2">{issue.description}</p>
+                                <div className="text-xs text-red-600">
+                                  <strong>File:</strong> {issue.file} {issue.line && `(Line ${issue.line})`}
+                                </div>
+                                {issue.mitigation && (
+                                  <div className="text-xs text-red-600 mt-1">
+                                    <strong>Mitigation:</strong> {issue.mitigation}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Best Practices */}
+                  {selectedReview.review.best_practices && selectedReview.review.best_practices.length > 0 && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <h4 className="font-medium text-yellow-800 mb-3">Best Practices</h4>
+                      <div className="space-y-3">
+                        {selectedReview.review.best_practices.map((practice, index) => (
+                          <div key={index} className="bg-white rounded border border-yellow-200 p-3">
+                            <div className="flex items-start">
+                              <CheckCircle className="w-4 h-4 text-yellow-500 mr-2 mt-0.5" />
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <span className="text-sm font-medium text-yellow-800">{practice.category}</span>
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    practice.severity === 'high' ? 'bg-red-100 text-red-800' :
+                                    practice.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {practice.severity}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-yellow-700 mb-2">{practice.issue}</p>
+                                <p className="text-sm text-yellow-600">{practice.suggestion}</p>
+                                <div className="text-xs text-yellow-600 mt-1">
+                                  <strong>File:</strong> {practice.file} {practice.line && `(Line ${practice.line})`}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Improvements */}
+                  {selectedReview.review.improvements && selectedReview.review.improvements.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-medium text-blue-800 mb-3">Suggested Improvements</h4>
+                      <div className="space-y-3">
+                        {selectedReview.review.improvements.map((improvement, index) => (
+                          <div key={index} className="bg-white rounded border border-blue-200 p-3">
+                            <div className="flex items-start">
+                              <Code className="w-4 h-4 text-blue-500 mr-2 mt-0.5" />
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <span className="text-sm font-medium text-blue-800">{improvement.type}</span>
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    improvement.priority === 'high' ? 'bg-red-100 text-red-800' :
+                                    improvement.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {improvement.priority} priority
+                                  </span>
+                                  <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                    {improvement.effort} effort
+                                  </span>
+                                </div>
+                                <p className="text-sm text-blue-700 mb-2">{improvement.description}</p>
+                                <p className="text-sm text-blue-600">{improvement.impact}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Code className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No code review available for this commit.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

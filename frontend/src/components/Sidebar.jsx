@@ -42,7 +42,7 @@ const Sidebar = () => {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <div className="w-64 bg-white shadow-sm border-r border-gray-200 min-h-screen">
+    <div className="w-full lg:w-64 bg-white shadow-sm border-r border-gray-200 min-h-screen lg:min-h-0">
       <div className="p-6">
         {/* Quick Stats */}
         <div className="mb-8">

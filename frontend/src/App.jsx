@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
@@ -22,14 +22,18 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
         <div className="min-h-screen bg-gray-50">
-          <Header />
-          <div className="flex">
-            <Sidebar />
-            <main className="flex-1 p-6">
+          <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+          <div className="flex flex-col lg:flex-row">
+            <div className={`${sidebarOpen ? 'block' : 'hidden'} lg:block`}>
+              <Sidebar />
+            </div>
+            <main className="flex-1 p-4 lg:p-6 min-w-0">
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/analyze" element={<CommitAnalysis />} />

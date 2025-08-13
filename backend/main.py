@@ -109,12 +109,28 @@ async def analyze_commit(
             analysis_depth=request.analysis_depth
         )
         
+        # Add repository path to the analysis result
+        if hasattr(analysis_result, 'model_dump'):
+            # It's a Pydantic model (v2+)
+            result_dict = analysis_result.model_dump()
+        elif hasattr(analysis_result, 'dict'):
+            # It's a Pydantic model (v1)
+            result_dict = analysis_result.dict()
+        elif hasattr(analysis_result, '__dict__'):
+            # It's a regular object
+            result_dict = analysis_result.__dict__
+        else:
+            # It's already a dict
+            result_dict = analysis_result
+        
+        result_dict['repository_path'] = request.repository_path
+        
         # Store result in database
         background_tasks.add_task(
             store_analysis_result,
             db,
             request.commit_hash,
-            analysis_result
+            result_dict
         )
         
         return analysis_result
@@ -284,6 +300,58 @@ async def get_revert_recommendation_alt(commit_hash: str, db = Depends(get_db)):
         logger.error(f"Error generating revert recommendation: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/analysis/{commit_hash}/review")
+async def get_code_review(commit_hash: str, db = Depends(get_db)):
+    """
+    Get comprehensive code review for a commit
+    """
+    try:
+        # First get the analysis result to ensure the commit exists
+        analysis = await db.get_analysis_result(commit_hash)
+        if not analysis:
+            raise HTTPException(status_code=404, detail="Analysis not found")
+        
+        # Create commit info from the analysis data
+        commit_info = {
+            'hash': commit_hash,
+            'author': analysis.get('commit_author', 'Unknown'),
+            'date': analysis.get('commit_date', 'Unknown'),
+            'message': analysis.get('commit_message', 'No message'),
+            'changes': [],  # We don't have the actual changes, but we can still do a review
+            'parent_hashes': [],
+            'branch': 'unknown'
+        }
+        
+        # Try to get additional commit details from git if available
+        repo_path = analysis.get('repository_path')
+        if repo_path:
+            try:
+                git_commit_info = await git_analyzer.get_commit_details(repo_path, commit_hash)
+                if git_commit_info:
+                    # Convert CommitInfo object to dict and merge with analysis info
+                    git_info_dict = {
+                        'hash': git_commit_info.hash,
+                        'author': git_commit_info.author,
+                        'date': git_commit_info.date,
+                        'message': git_commit_info.message,
+                        'changes': git_commit_info.changes,
+                        'parent_hashes': git_commit_info.parent_hashes,
+                        'branch': git_commit_info.branch
+                    }
+                    commit_info.update(git_info_dict)
+            except Exception as git_error:
+                logger.warning(f"Could not get git details for commit {commit_hash}: {str(git_error)}")
+                # Continue with analysis-based commit info
+        else:
+            logger.warning("No repository path available, using analysis-based commit info only")
+        
+        # Perform code review
+        review_result = await regression_analyzer.perform_code_review(commit_info)
+        return review_result
+    except Exception as e:
+        logger.error(f"Error performing code review: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/history")
 async def get_analysis_history(
     limit: int = 50,
@@ -371,6 +439,9 @@ async def run_batch_analysis(
                 else:
                     # It's already a dict
                     result_dict = analysis_result
+                
+                # Add repository path to the analysis result
+                result_dict['repository_path'] = request.repository_path
                 
                 await db.store_analysis_result(commit['hash'], result_dict)
                 completed += 1

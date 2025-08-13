@@ -4,10 +4,11 @@ import {
   Shield, 
   Brain, 
   Wifi,
-  WifiOff
+  WifiOff,
+  Menu
 } from 'lucide-react';
 
-const Header = () => {
+const Header = ({ onMenuClick }) => {
   const [apiStatus, setApiStatus] = React.useState('connected');
   const [gitStatus, setGitStatus] = React.useState('ready');
   const [securityStatus, setSecurityStatus] = React.useState('active');
@@ -55,23 +56,33 @@ const Header = () => {
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col sm:flex-row justify-between items-center h-auto sm:h-16 py-4 sm:py-0">
           {/* Logo and Title */}
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center justify-center w-8 h-8 bg-primary-600 rounded-lg">
-              <GitBranch className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between w-full sm:w-auto">
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center justify-center w-8 h-8 bg-primary-600 rounded-lg">
+                <GitBranch className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">
+                  Commit Regression Analyzer
+                </h1>
+                <p className="text-sm text-gray-500">AI-Powered Code Analysis</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">
-                Commit Regression Analyzer
-              </h1>
-              <p className="text-sm text-gray-500">AI-Powered Code Analysis</p>
-            </div>
+            
+            {/* Mobile menu button */}
+            <button
+              onClick={onMenuClick}
+              className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
           </div>
 
           {/* Status Indicators */}
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-2 sm:space-x-6 mt-4 sm:mt-0 flex-wrap justify-center">
             <div className="flex items-center space-x-2">
               <div className={`${getStatusColor(apiStatus)}`}>
                 {getStatusIcon(apiStatus, 'api')}

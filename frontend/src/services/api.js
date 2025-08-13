@@ -61,6 +61,11 @@ export const getRevertRecommendation = async (commitHash) => {
   return response.data;
 };
 
+export const getCodeReview = async (commitHash) => {
+  const response = await api.get(`/analysis/${commitHash}/review`);
+  return response.data;
+};
+
 export const getAnalysisHistory = async (limit = 20, offset = 0) => {
   const response = await api.get(`/analysis/history?limit=${limit}&offset=${offset}`);
   return response.data;

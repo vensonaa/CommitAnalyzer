@@ -48,6 +48,17 @@ class FixSuggestion:
     effort_level: str  # low, medium, high
     risk_assessment: str
 
+class CodeReviewResult(BaseModel):
+    overall_score: float
+    code_quality: Dict[str, Any]
+    best_practices: List[Dict[str, Any]]
+    improvements: List[Dict[str, Any]]
+    security_issues: List[Dict[str, Any]]
+    performance_issues: List[Dict[str, Any]]
+    maintainability: Dict[str, Any]
+    documentation: Dict[str, Any]
+    testing_coverage: Dict[str, Any]
+
 class AnalysisResult(BaseModel):
     commit_hash: str
     timestamp: datetime
@@ -64,11 +75,7 @@ class AnalysisResult(BaseModel):
 
 class RegressionAnalyzer:
     def __init__(self):
-        self.llm = ChatGroq(
-            api_key="",
-            model_name="openai/gpt-oss-120b",
-            temperature=0.1
-        )
+        self.llm = None
         self.output_parser = JsonOutputParser()
         
     def _get_api_key(self) -> str:
@@ -78,6 +85,20 @@ class RegressionAnalyzer:
         if not api_key:
             raise ValueError("GROQ_API_KEY environment variable is required")
         return api_key
+    
+    def _get_llm(self):
+        """Get LLM instance, initializing if needed"""
+        if self.llm is None:
+            try:
+                self.llm = ChatGroq(
+                    api_key=self._get_api_key(),
+                    model_name="openai/gpt-oss-120b",
+                    temperature=0.1
+                )
+            except ValueError as e:
+                logger.error(f"Failed to initialize LLM: {str(e)}")
+                raise
+        return self.llm
     
     async def analyze_commit(
         self,
@@ -219,7 +240,7 @@ class RegressionAnalyzer:
         ]
         
         try:
-            response = await self.llm.ainvoke(messages)
+            response = await self._get_llm().ainvoke(messages)
             analysis_result = json.loads(response.content)
             return analysis_result
         except json.JSONDecodeError:
@@ -425,7 +446,7 @@ Provide practical, actionable suggestions that can be implemented immediately.
                 HumanMessage(content=f"Generate fix suggestions for:\n\n{context}")
             ]
             
-            response = await self.llm.ainvoke(messages)
+            response = await self._get_llm().ainvoke(messages)
             suggestions = json.loads(response.content)
             
             return suggestions.get("fixes", [])
@@ -475,7 +496,7 @@ Provide a clear recommendation with reasoning and alternative approaches.
                 HumanMessage(content=f"Should this commit be reverted?\n\n{context}")
             ]
             
-            response = await self.llm.ainvoke(messages)
+            response = await self._get_llm().ainvoke(messages)
             recommendation = json.loads(response.content)
             
             return recommendation
@@ -505,3 +526,129 @@ Provide a clear recommendation with reasoning and alternative approaches.
             context_parts.append(f"- {suggestion['effort_level']} effort: {suggestion['title']}")
         
         return "\n".join(context_parts)
+
+    async def perform_code_review(self, commit_info: Union[Dict[str, Any], 'CommitInfo']) -> Dict[str, Any]:
+        """
+        Perform a comprehensive code review of the commit
+        """
+        try:
+            # Convert CommitInfo to dict if needed
+            if hasattr(commit_info, 'hash'):
+                commit_dict = {
+                    'hash': commit_info.hash,
+                    'author': commit_info.author,
+                    'date': commit_info.date,
+                    'message': commit_info.message,
+                    'changes': commit_info.changes,
+                    'parent_hashes': commit_info.parent_hashes,
+                    'branch': commit_info.branch
+                }
+            else:
+                commit_dict = commit_info
+
+            # Prepare analysis context
+            analysis_context = self._prepare_analysis_context(
+                commit_dict, include_tests=True, include_performance=True, include_security=True
+            )
+
+            prompt = f"""
+            Perform a comprehensive code review for the following commit. Analyze code quality, best practices, security, performance, and maintainability.
+
+            Commit Information:
+            {analysis_context}
+
+            Provide a detailed code review in JSON format with the following structure:
+            {{
+                "overall_score": float (0-100),
+                "code_quality": {{
+                    "score": float (0-100),
+                    "issues": [string],
+                    "strengths": [string],
+                    "complexity": "low|medium|high"
+                }},
+                "best_practices": [
+                    {{
+                        "category": string,
+                        "issue": string,
+                        "severity": "low|medium|high",
+                        "suggestion": string,
+                        "file": string,
+                        "line": int
+                    }}
+                ],
+                "improvements": [
+                    {{
+                        "type": "refactoring|optimization|security|documentation",
+                        "description": string,
+                        "priority": "low|medium|high",
+                        "effort": "low|medium|high",
+                        "impact": string
+                    }}
+                ],
+                "security_issues": [
+                    {{
+                        "type": string,
+                        "severity": "low|medium|high|critical",
+                        "description": string,
+                        "file": string,
+                        "line": int,
+                        "mitigation": string
+                    }}
+                ],
+                "performance_issues": [
+                    {{
+                        "type": string,
+                        "severity": "low|medium|high",
+                        "description": string,
+                        "file": string,
+                        "line": int,
+                        "optimization": string
+                    }}
+                ],
+                "maintainability": {{
+                    "score": float (0-100),
+                    "issues": [string],
+                    "suggestions": [string]
+                }},
+                "documentation": {{
+                    "score": float (0-100),
+                    "missing_docs": [string],
+                    "improvements": [string]
+                }},
+                "testing_coverage": {{
+                    "score": float (0-100),
+                    "missing_tests": [string],
+                    "suggestions": [string]
+                }}
+            }}
+
+            Focus on:
+            1. Code readability and structure
+            2. Security vulnerabilities
+            3. Performance bottlenecks
+            4. Best practices adherence
+            5. Documentation quality
+            6. Test coverage
+            7. Maintainability concerns
+            """
+
+            response = await self._get_llm().ainvoke([HumanMessage(content=prompt)])
+            result = json.loads(response.content)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error performing code review: {str(e)}")
+            # Return a more informative result on error
+            error_message = "API key not configured" if ("GROQ_API_KEY" in str(e) or "Expecting value" in str(e)) else f"Error performing review: {str(e)}"
+            return {
+                "overall_score": 0.0,
+                "code_quality": {"score": 0.0, "issues": [error_message], "strengths": [], "complexity": "unknown"},
+                "best_practices": [],
+                "improvements": [],
+                "security_issues": [],
+                "performance_issues": [],
+                "maintainability": {"score": 0.0, "issues": [error_message], "suggestions": []},
+                "documentation": {"score": 0.0, "missing_docs": [], "improvements": []},
+                "testing_coverage": {"score": 0.0, "missing_tests": [], "suggestions": []}
+            }
