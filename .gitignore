@@ -1,0 +1,7 @@
+.DS_Store
+backend/.env 2
+backend/commit_analyzer 2.db
+backend/commit_analyzer.db
+frontend/.gitignore 2
+backend/commit_analyzer.db
+backend/commit_analyzer.db
