@@ -5,3 +5,8 @@ backend/commit_analyzer.db
 frontend/.gitignore 2
 backend/commit_analyzer.db
 backend/commit_analyzer.db
+/backend/venv
+/mcp_server/venv
+/git_analyzer/__pycache__
+/database/__pycache__
+/ai_engine/__pycache__
