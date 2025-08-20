@@ -10,3 +10,11 @@ backend/commit_analyzer.db
 /git_analyzer/__pycache__
 /database/__pycache__
 /ai_engine/__pycache__
+ai_engine/.env
+backend/.env
+/backend/__pycache__
+mcp_server/.env
+/mcp_server/__pycache__
+backend/.env
+backend/.env
+backend/.env

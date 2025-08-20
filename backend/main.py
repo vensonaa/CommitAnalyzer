@@ -9,16 +9,10 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 
-import sys
-import os
-
-# Add the parent directory to the Python path to import from root directories
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from ai_engine.regression_analyzer import RegressionAnalyzer
 from git_analyzer.commit_analyzer import GitCommitAnalyzer
 from database.models import AnalysisResult, CommitAnalysis
-from database.database import DatabaseManager
+from database.database import get_db, init_db
 
 # Load environment variables
 load_dotenv()
@@ -36,14 +30,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000", 
-        "http://127.0.0.1:3000",
-        "http://localhost:5173", 
-        "http://127.0.0.1:5173",
-        "http://localhost:7000", 
-        "http://127.0.0.1:7000"
-    ],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -52,12 +39,6 @@ app.add_middleware(
 # Initialize components
 regression_analyzer = RegressionAnalyzer()
 git_analyzer = GitCommitAnalyzer()
-db_manager = DatabaseManager()
-
-# Database dependency
-async def get_db():
-    """Get database session"""
-    return await db_manager.get_session()
 
 # Pydantic models
 class CommitAnalysisRequest(BaseModel):
@@ -90,7 +71,7 @@ class AnalysisResult(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and components on startup"""
-    await db_manager.init_database()
+    await init_db()
     logger.info("Commit Regression Analyzer started successfully")
 
 @app.get("/")

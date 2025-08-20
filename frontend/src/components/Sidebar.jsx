@@ -42,42 +42,53 @@ const Sidebar = () => {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <div className="w-full lg:w-64 bg-white shadow-sm border-r border-gray-200 min-h-screen lg:min-h-0">
+    <div className="w-full lg:w-64 bg-gradient-to-b from-purple-50 via-pink-50 to-blue-50 shadow-lg border-r border-purple-200 min-h-screen lg:min-h-0">
       <div className="p-6">
         {/* Quick Stats */}
         <div className="mb-8">
-          <h3 className="text-sm font-medium text-gray-900 mb-4">Quick Stats</h3>
+          <h3 className="text-sm font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-4 flex items-center">
+            <TrendingUp className="w-4 h-4 text-purple-500 mr-2" />
+            Quick Stats
+          </h3>
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-lg border border-blue-200 hover:shadow-md transition-all duration-200">
               <div className="flex items-center space-x-2">
-                <TrendingUp className="w-4 h-4 text-blue-500" />
-                <span className="text-sm text-gray-600">Total Analyses</span>
+                <div className="p-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded">
+                  <TrendingUp className="w-3 h-3 text-white" />
+                </div>
+                <span className="text-sm font-medium text-gray-700">Total Analyses</span>
               </div>
-              <span className="text-sm font-medium text-gray-900">{stats.totalAnalyses}</span>
+              <span className="text-sm font-bold text-blue-600 bg-white px-2 py-1 rounded-full shadow-sm">{stats.totalAnalyses}</span>
             </div>
             
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg border border-green-200 hover:shadow-md transition-all duration-200">
               <div className="flex items-center space-x-2">
-                <Clock className="w-4 h-4 text-green-500" />
-                <span className="text-sm text-gray-600">Today</span>
+                <div className="p-1 bg-gradient-to-r from-green-500 to-emerald-600 rounded">
+                  <Clock className="w-3 h-3 text-white" />
+                </div>
+                <span className="text-sm font-medium text-gray-700">Today</span>
               </div>
-              <span className="text-sm font-medium text-gray-900">{stats.todayAnalyses}</span>
+              <span className="text-sm font-bold text-green-600 bg-white px-2 py-1 rounded-full shadow-sm">{stats.todayAnalyses}</span>
             </div>
             
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between bg-gradient-to-r from-red-50 to-pink-50 p-3 rounded-lg border border-red-200 hover:shadow-md transition-all duration-200">
               <div className="flex items-center space-x-2">
-                <AlertTriangle className="w-4 h-4 text-red-500" />
-                <span className="text-sm text-gray-600">High Risk</span>
+                <div className="p-1 bg-gradient-to-r from-red-500 to-pink-600 rounded">
+                  <AlertTriangle className="w-3 h-3 text-white" />
+                </div>
+                <span className="text-sm font-medium text-gray-700">High Risk</span>
               </div>
-              <span className="text-sm font-medium text-gray-900">{stats.highRiskIssues}</span>
+              <span className="text-sm font-bold text-red-600 bg-white px-2 py-1 rounded-full shadow-sm">{stats.highRiskIssues}</span>
             </div>
             
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between bg-gradient-to-r from-emerald-50 to-teal-50 p-3 rounded-lg border border-emerald-200 hover:shadow-md transition-all duration-200">
               <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span className="text-sm text-gray-600">Avg Confidence</span>
+                <div className="p-1 bg-gradient-to-r from-emerald-500 to-teal-600 rounded">
+                  <CheckCircle className="w-3 h-3 text-white" />
+                </div>
+                <span className="text-sm font-medium text-gray-700">Avg Confidence</span>
               </div>
-              <span className="text-sm font-medium text-gray-900">{stats.avgConfidence}%</span>
+              <span className="text-sm font-bold text-emerald-600 bg-white px-2 py-1 rounded-full shadow-sm">{stats.avgConfidence}%</span>
             </div>
           </div>
         </div>

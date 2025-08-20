@@ -6,11 +6,16 @@ import re
 import json
 from dataclasses import dataclass
 from enum import Enum
+import os
 
+from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
+
+# Load environment variables
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 

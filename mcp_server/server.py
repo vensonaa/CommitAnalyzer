@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
-from mcp.server import Server
+from mcp.server import Server, NotificationOptions
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 from pydantic import BaseModel
@@ -423,20 +423,26 @@ RegressionAnalyzer._format_suggestions = _format_suggestions
 
 async def main():
     """Main function to run the MCP server"""
-    # Run the server
-    async with stdio_server() as (read_stream, write_stream):
-        await server.run(
-            read_stream,
-            write_stream,
-            InitializationOptions(
-                server_name="commit-regression-analyzer",
-                server_version="1.0.0",
-                capabilities=server.get_capabilities(
-                    notification_options=None,
-                    experimental_capabilities=None,
+    logger.info("Starting MCP server...")
+    try:
+        # Run the server
+        async with stdio_server() as (read_stream, write_stream):
+            logger.info("MCP server stdio streams created successfully")
+            await server.run(
+                read_stream,
+                write_stream,
+                InitializationOptions(
+                    server_name="commit-regression-analyzer",
+                    server_version="1.0.0",
+                    capabilities=server.get_capabilities(
+                        notification_options=NotificationOptions(),
+                        experimental_capabilities={},
+                    ),
                 ),
-            ),
-        )
+            )
+    except Exception as e:
+        logger.error(f"Error starting MCP server: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     asyncio.run(main())

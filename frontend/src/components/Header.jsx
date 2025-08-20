@@ -55,27 +55,27 @@ const Header = ({ onMenuClick }) => {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
+    <header className="bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 shadow-lg border-b border-purple-400">
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row justify-between items-center h-auto sm:h-16 py-4 sm:py-0">
           {/* Logo and Title */}
           <div className="flex items-center justify-between w-full sm:w-auto">
             <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-8 h-8 bg-primary-600 rounded-lg">
-                <GitBranch className="w-5 h-5 text-white" />
+              <div className="flex items-center justify-center w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg border border-white/30">
+                <GitBranch className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-white drop-shadow-lg">
                   Commit Regression Analyzer
                 </h1>
-                <p className="text-sm text-gray-500">AI-Powered Code Analysis</p>
+                <p className="text-sm text-white/80 font-medium">AI-Powered Code Analysis</p>
               </div>
             </div>
             
             {/* Mobile menu button */}
             <button
               onClick={onMenuClick}
-              className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+              className="lg:hidden p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/20 backdrop-blur-sm transition-all duration-200"
             >
               <Menu className="w-6 h-6" />
             </button>
@@ -83,32 +83,32 @@ const Header = ({ onMenuClick }) => {
 
           {/* Status Indicators */}
           <div className="flex items-center space-x-2 sm:space-x-6 mt-4 sm:mt-0 flex-wrap justify-center">
-            <div className="flex items-center space-x-2">
-              <div className={`${getStatusColor(apiStatus)}`}>
+            <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/20">
+              <div className={`${getStatusColor(apiStatus)} drop-shadow-lg`}>
                 {getStatusIcon(apiStatus, 'api')}
               </div>
-              <span className="text-sm text-gray-600">API Connected</span>
+              <span className="text-sm text-white font-medium">API Connected</span>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <div className={`${getStatusColor(gitStatus)}`}>
+            <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/20">
+              <div className={`${getStatusColor(gitStatus)} drop-shadow-lg`}>
                 <GitBranch className="w-4 h-4" />
               </div>
-              <span className="text-sm text-gray-600">Git Ready</span>
+              <span className="text-sm text-white font-medium">Git Ready</span>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <div className={`${getStatusColor(securityStatus)}`}>
+            <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/20">
+              <div className={`${getStatusColor(securityStatus)} drop-shadow-lg`}>
                 {getStatusIcon(securityStatus, 'security')}
               </div>
-              <span className="text-sm text-gray-600">Security Active</span>
+              <span className="text-sm text-white font-medium">Security Active</span>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <div className={`${getStatusColor(aiStatus)}`}>
+            <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/20">
+              <div className={`${getStatusColor(aiStatus)} drop-shadow-lg`}>
                 <Brain className="w-4 h-4" />
               </div>
-              <span className="text-sm text-gray-600">AI Engine</span>
+              <span className="text-sm text-white font-medium">AI Engine</span>
             </div>
           </div>
         </div>
